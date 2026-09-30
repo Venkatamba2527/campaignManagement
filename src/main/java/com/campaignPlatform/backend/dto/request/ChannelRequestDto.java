@@ -1,4 +1,4 @@
-package com.campaignPlatform.backend.dto.channel;
+package com.campaignPlatform.backend.dto.request;
 
 import com.campaignPlatform.backend.domain.ChannelType;
 import jakarta.validation.constraints.NotBlank;
@@ -22,7 +22,6 @@ public record ChannelRequestDto(
 
         Boolean isActive
 ) {
-    // Default isActive to true when not provided
     public ChannelRequestDto {
         if (isActive == null) isActive = true;
     }

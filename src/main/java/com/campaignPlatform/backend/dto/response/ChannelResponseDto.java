@@ -1,4 +1,4 @@
-package com.campaignPlatform.backend.dto.channel;
+package com.campaignPlatform.backend.dto.response;
 
 import com.campaignPlatform.backend.domain.ChannelType;
 

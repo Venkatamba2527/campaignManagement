@@ -1,4 +1,4 @@
-package com.campaignPlatform.backend.dto.campaign;
+package com.campaignPlatform.backend.dto.response;
 
 import com.campaignPlatform.backend.domain.CampaignStatus;
 

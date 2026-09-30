@@ -1,4 +1,4 @@
-package com.campaignPlatform.backend.dto.campaign;
+package com.campaignPlatform.backend.dto.request;
 
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotBlank;
@@ -31,7 +31,6 @@ public record CampaignRequestDto(
 
         String createdBy
 ) {
-    // Default currency to USD when not provided
     public CampaignRequestDto {
         if (currency == null || currency.isBlank()) currency = "USD";
     }
