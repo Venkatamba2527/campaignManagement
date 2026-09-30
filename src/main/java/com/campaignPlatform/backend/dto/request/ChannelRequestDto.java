@@ -17,8 +17,7 @@ public record ChannelRequestDto(
         @NotNull(message = "Channel type is required")
         ChannelType type,
 
-        @Size(max = 500, message = "Description must not exceed 500 characters")
-        String description,
+     
 
         Boolean isActive
 ) {

@@ -16,8 +16,7 @@ public record CampaignRequestDto(
         @Size(max = 200, message = "Campaign name must not exceed 200 characters")
         String name,
 
-        @Size(max = 1000, message = "Description must not exceed 1000 characters")
-        String description,
+        
 
         @DecimalMin(value = "0.0", inclusive = false, message = "Budget must be greater than 0")
         BigDecimal budget,
