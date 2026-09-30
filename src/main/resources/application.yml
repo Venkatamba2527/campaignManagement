@@ -1,0 +1,31 @@
+spring:
+  application:
+    name: campaign-platform
+
+  datasource:
+    url: jdbc:postgresql://localhost:5432/campaign_db
+    username: campaign
+    password: campaign
+    driver-class-name: org.postgresql.Driver
+
+  liquibase:
+    change-log: classpath:db/changelog/db.changelog-master.xml
+    enabled: true
+
+  jooq:
+    sql-dialect: POSTGRES
+
+server:
+  port: 8080
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+logging:
+  level:
+    org.jooq: INFO
+    org.liquibase: INFO
+    com.campaignplatform: DEBUG
