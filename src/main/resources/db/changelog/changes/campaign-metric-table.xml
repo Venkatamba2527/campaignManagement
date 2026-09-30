@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                                       http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.8.xsd">
+
+    <changeSet id="db.changelog-20260930000004-create-campaign-metric" author="campaign-platform">
+
+        <comment>
+            Create campaign_metric table to track daily performance metrics per campaign
+        </comment>
+
+        <sql dbms="postgresql" splitStatements="true" stripComments="true">
+            <![CDATA[
+            CREATE TABLE public.campaign_metric (
+                id          BIGSERIAL     NOT NULL,
+                campaign_id BIGINT        NOT NULL,
+                metric_date DATE          NOT NULL,
+                impressions BIGINT        NOT NULL DEFAULT 0,
+                clicks      BIGINT        NOT NULL DEFAULT 0,
+                conversions BIGINT        NOT NULL DEFAULT 0,
+                spend       NUMERIC(15,2) NOT NULL DEFAULT 0,
+                revenue     NUMERIC(15,2) NOT NULL DEFAULT 0,
+                created_at  TIMESTAMPTZ   NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                updated_at  TIMESTAMPTZ   NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+                CONSTRAINT pk_campaign_metric
+                    PRIMARY KEY (id),
+
+                CONSTRAINT uk_campaign_metric_date
+                    UNIQUE (campaign_id, metric_date),
+
+                CONSTRAINT fk_campaign_metric_campaign
+                    FOREIGN KEY (campaign_id)
+                    REFERENCES public.campaign(id)
+                    ON DELETE CASCADE
+            );
+
+            CREATE INDEX idx_campaign_metric_date
+                ON public.campaign_metric(metric_date);
+            ]]>
+        </sql>
+
+        <rollback>
+            <sql dbms="postgresql" splitStatements="true" stripComments="true">
+                <![CDATA[
+                DROP TABLE IF EXISTS public.campaign_metric;
+                ]]>
+            </sql>
+        </rollback>
+
+    </changeSet>
+
+</databaseChangeLog>
