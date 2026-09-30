@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                                       http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.8.xsd">
+
+    <changeSet id="db.changelog-20260930000005-create-campaign-status-history" author="campaign-platform">
+
+        <comment>
+            Create campaign_status_history audit table to track all campaign status transitions
+        </comment>
+
+        <sql dbms="postgresql" splitStatements="true" stripComments="true">
+            <![CDATA[
+            CREATE TABLE public.campaign_status_history (
+                id          BIGSERIAL    NOT NULL,
+                campaign_id BIGINT       NOT NULL,
+                old_status  VARCHAR(30),
+                new_status  VARCHAR(30)  NOT NULL,
+                changed_by  VARCHAR(100),
+                changed_at  TIMESTAMPTZ  NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                notes       TEXT,
+
+                CONSTRAINT pk_campaign_status_history
+                    PRIMARY KEY (id),
+
+                CONSTRAINT fk_status_history_campaign
+                    FOREIGN KEY (campaign_id)
+                    REFERENCES public.campaign(id)
+                    ON DELETE CASCADE
+            );
+
+            CREATE INDEX idx_status_history_campaign
+                ON public.campaign_status_history(campaign_id);
+            ]]>
+        </sql>
+
+        <rollback>
+            <sql dbms="postgresql" splitStatements="true" stripComments="true">
+                <![CDATA[
+                DROP TABLE IF EXISTS public.campaign_status_history;
+                ]]>
+            </sql>
+        </rollback>
+
+    </changeSet>
+
+</databaseChangeLog>

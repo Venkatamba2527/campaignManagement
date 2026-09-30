@@ -1,0 +1,53 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                                       http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.8.xsd">
+
+    <changeSet id="db.changelog-20260930000003-create-campaign-channel" author="campaign-platform">
+
+        <comment>
+            Create campaign_channel join table linking campaigns to their channels with budget allocation
+        </comment>
+
+        <sql dbms="postgresql" splitStatements="true" stripComments="true">
+            <![CDATA[
+            CREATE TABLE public.campaign_channel (
+                id                 BIGSERIAL     NOT NULL,
+                campaign_id        BIGINT        NOT NULL,
+                channel_id         BIGINT        NOT NULL,
+                allocation_percent NUMERIC(5,2),
+                budget_allocated   NUMERIC(15,2),
+                created_at         TIMESTAMPTZ   NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+                CONSTRAINT pk_campaign_channel
+                    PRIMARY KEY (id),
+
+                CONSTRAINT uk_campaign_channel
+                    UNIQUE (campaign_id, channel_id),
+
+                CONSTRAINT fk_campaign_channel_campaign
+                    FOREIGN KEY (campaign_id)
+                    REFERENCES public.campaign(id)
+                    ON DELETE CASCADE,
+
+                CONSTRAINT fk_campaign_channel_channel
+                    FOREIGN KEY (channel_id)
+                    REFERENCES public.channel(id)
+                    ON DELETE RESTRICT
+            );
+            ]]>
+        </sql>
+
+        <rollback>
+            <sql dbms="postgresql" splitStatements="true" stripComments="true">
+                <![CDATA[
+                DROP TABLE IF EXISTS public.campaign_channel;
+                ]]>
+            </sql>
+        </rollback>
+
+    </changeSet>
+
+</databaseChangeLog>

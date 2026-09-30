@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                                       http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.8.xsd">
+
+    <changeSet id="db.changelog-20260930000006-seed-channels" author="campaign-platform">
+
+        <comment>
+            Insert the five default marketing channels: EMAIL, SMS, SOCIAL, PUSH, DISPLAY
+        </comment>
+
+        <sql dbms="postgresql" splitStatements="true" stripComments="true">
+            <![CDATA[
+            INSERT INTO public.channel (name, type, description) VALUES
+                ('Email',             'EMAIL',   'Email marketing campaigns'),
+                ('SMS',               'SMS',     'SMS / text message campaigns'),
+                ('Social Media',      'SOCIAL',  'Facebook, Instagram, LinkedIn, X, etc.'),
+                ('Push Notification', 'PUSH',    'Mobile and web push notifications'),
+                ('Display Ads',       'DISPLAY', 'Banner and display advertising');
+            ]]>
+        </sql>
+
+        <rollback>
+            <sql dbms="postgresql" splitStatements="true" stripComments="true">
+                <![CDATA[
+                DELETE FROM public.channel
+                WHERE name IN ('Email', 'SMS', 'Social Media', 'Push Notification', 'Display Ads');
+                ]]>
+            </sql>
+        </rollback>
+
+    </changeSet>
+
+</databaseChangeLog>

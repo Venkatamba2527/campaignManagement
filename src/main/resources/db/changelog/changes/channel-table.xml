@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                                       http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.8.xsd">
+
+    <changeSet id="db.changelog-20260930000001-create-channel" author="campaign-platform">
+
+        <comment>
+            Create channel table to store marketing channel definitions (EMAIL, SMS, SOCIAL, etc.)
+        </comment>
+
+        <sql dbms="postgresql" splitStatements="true" stripComments="true">
+            <![CDATA[
+            CREATE TABLE public.channel (
+                id          BIGSERIAL    NOT NULL,
+                name        VARCHAR(100) NOT NULL,
+                type        VARCHAR(50)  NOT NULL,
+                description TEXT,
+                is_active   BOOLEAN      NOT NULL DEFAULT true,
+                created_at  TIMESTAMPTZ  NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                updated_at  TIMESTAMPTZ  NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+                CONSTRAINT pk_channel PRIMARY KEY (id),
+                CONSTRAINT uk_channel_name UNIQUE (name)
+            );
+
+            CREATE INDEX idx_channel_type
+                ON public.channel(type);
+            ]]>
+        </sql>
+
+        <rollback>
+            <sql dbms="postgresql" splitStatements="true" stripComments="true">
+                <![CDATA[
+                DROP TABLE IF EXISTS public.channel;
+                ]]>
+            </sql>
+        </rollback>
+
+    </changeSet>
+
+</databaseChangeLog>
