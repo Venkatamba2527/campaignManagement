@@ -1,4 +1,4 @@
-package com.campaignPlatform.backend.domain.model.campaign;
+package com.campaignPlatform.backend.dto.campaign;
 
 import com.campaignPlatform.backend.domain.CampaignStatus;
 
@@ -6,9 +6,9 @@ import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 
 /**
- * Response payload representing a Campaign.
+ * DTO returned by the API representing a Campaign.
  */
-public record CampaignResponse(
+public record CampaignResponseDto(
 
         Long id,
         String name,

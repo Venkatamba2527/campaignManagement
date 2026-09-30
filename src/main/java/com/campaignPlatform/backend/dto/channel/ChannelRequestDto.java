@@ -1,4 +1,4 @@
-package com.campaignPlatform.backend.domain.model.channel;
+package com.campaignPlatform.backend.dto.channel;
 
 import com.campaignPlatform.backend.domain.ChannelType;
 import jakarta.validation.constraints.NotBlank;
@@ -6,9 +6,9 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
 /**
- * Request payload for creating or updating a Channel.
+ * DTO for creating or updating a Channel.
  */
-public record ChannelRequest(
+public record ChannelRequestDto(
 
         @NotBlank(message = "Channel name is required")
         @Size(max = 100, message = "Channel name must not exceed 100 characters")
@@ -23,7 +23,7 @@ public record ChannelRequest(
         Boolean isActive
 ) {
     // Default isActive to true when not provided
-    public ChannelRequest {
+    public ChannelRequestDto {
         if (isActive == null) isActive = true;
     }
 }

@@ -1,13 +1,13 @@
-package com.campaignPlatform.backend.domain.model.channel;
+package com.campaignPlatform.backend.dto.channel;
 
 import com.campaignPlatform.backend.domain.ChannelType;
 
 import java.time.OffsetDateTime;
 
 /**
- * Response payload representing a Channel.
+ * DTO returned by the API representing a Channel.
  */
-public record ChannelResponse(
+public record ChannelResponseDto(
 
         Long id,
         String name,

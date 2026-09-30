@@ -1,4 +1,4 @@
-package com.campaignPlatform.backend.domain.model.campaign;
+package com.campaignPlatform.backend.dto.campaign;
 
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotBlank;
@@ -8,9 +8,9 @@ import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 
 /**
- * Request payload for creating or updating a Campaign.
+ * DTO for creating or updating a Campaign.
  */
-public record CampaignRequest(
+public record CampaignRequestDto(
 
         @NotBlank(message = "Campaign name is required")
         @Size(max = 200, message = "Campaign name must not exceed 200 characters")
@@ -32,7 +32,7 @@ public record CampaignRequest(
         String createdBy
 ) {
     // Default currency to USD when not provided
-    public CampaignRequest {
+    public CampaignRequestDto {
         if (currency == null || currency.isBlank()) currency = "USD";
     }
 }
