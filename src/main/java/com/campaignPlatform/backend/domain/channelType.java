@@ -1,6 +1,6 @@
 package com.campaignPlatform.backend.domain;
 
-public enum channelType {
+public enum ChannelType {
     EMAIL,
     SMS,
     SOCIAL,
