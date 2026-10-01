@@ -39,10 +39,7 @@ public class ChannelService {
     // -------------------------------------------------------
 
     public ChannelResponseDto createChannel(ChannelRequestDto dto) {
-        boolean nameExists = channelRepository.findAll()
-                .stream()
-                .anyMatch(c -> c.name().equalsIgnoreCase(dto.name()));
-        if (nameExists) {
+        if (channelRepository.existsByName(dto.name())) {
             throw new IllegalArgumentException("Channel with name '" + dto.name() + "' already exists");
         }
         return channelRepository.create(dto);

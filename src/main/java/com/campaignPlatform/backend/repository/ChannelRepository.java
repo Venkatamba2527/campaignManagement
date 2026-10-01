@@ -15,6 +15,18 @@ import static com.campaignplatform.jooq.Tables.CHANNEL;
 @Repository
 public class ChannelRepository {
 
+    // -------------------------------------------------------
+    // EXISTS
+    // -------------------------------------------------------
+
+    public boolean existsByName(String name) {
+        return dsl.fetchExists(
+                dsl.selectOne()
+                   .from(CHANNEL)
+                   .where(CHANNEL.NAME.equalIgnoreCase(name))
+        );
+    }
+
     private final DSLContext dsl;
 
     public ChannelRepository(DSLContext dsl) {

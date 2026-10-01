@@ -3,13 +3,19 @@ package com.campaignPlatform.backend.repository;
 import com.campaignPlatform.backend.domain.CampaignStatus;
 import com.campaignPlatform.backend.dto.request.CampaignRequestDto;
 import com.campaignPlatform.backend.dto.response.CampaignResponseDto;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.jooq.DSLContext;
 import org.jooq.JSONB;
 import org.springframework.stereotype.Repository;
 
 import java.time.OffsetDateTime;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import static com.campaignplatform.jooq.Tables.CAMPAIGN;
@@ -18,9 +24,11 @@ import static com.campaignplatform.jooq.Tables.CAMPAIGN;
 public class CampaignRepository {
 
     private final DSLContext dsl;
+    private final ObjectMapper mapper;
 
-    public CampaignRepository(DSLContext dsl) {
-        this.dsl = dsl;
+    public CampaignRepository(DSLContext dsl, ObjectMapper mapper) {
+        this.dsl    = dsl;
+        this.mapper = mapper;
     }
 
     // -------------------------------------------------------
@@ -170,21 +178,34 @@ public class CampaignRepository {
     }
 
     private String buildAuditEntry(CampaignStatus from, CampaignStatus to, String by) {
-        String ts = OffsetDateTime.now().toString();
-        String fromStr = from != null ? "\"" + from.name() + "\"" : "null";
-        return "[{\"from\":" + fromStr + ",\"to\":\"" + to.name()
-                + "\",\"by\":\"" + (by != null ? by : "") + "\",\"at\":\"" + ts + "\"}]";
+        try {
+            ObjectNode entry = mapper.createObjectNode();
+            if (from != null) entry.put("from", from.name()); else entry.putNull("from");
+            entry.put("to",  to.name());
+            entry.put("by",  by != null ? by : "");
+            entry.put("at",  OffsetDateTime.now().toString());
+            return mapper.writeValueAsString(List.of(mapper.treeToValue(entry, Object.class)));
+        } catch (JsonProcessingException e) {
+            throw new IllegalStateException("Failed to build audit JSON", e);
+        }
     }
 
     private String appendAuditEntry(String existingJson, CampaignStatus from, CampaignStatus to, String by) {
-        String ts = OffsetDateTime.now().toString();
-        String entry = "{\"from\":\"" + from.name() + "\",\"to\":\"" + to.name()
-                + "\",\"by\":\"" + (by != null ? by : "") + "\",\"at\":\"" + ts + "\"}";
-        // Append to existing JSON array
-        String trimmed = existingJson.trim();
-        if (trimmed.equals("[]")) {
-            return "[" + entry + "]";
+        try {
+            List<Map<String, Object>> entries = mapper.readValue(
+                    existingJson, new TypeReference<>() {});
+            List<Map<String, Object>> mutable = new ArrayList<>(entries);
+
+            ObjectNode entry = mapper.createObjectNode();
+            entry.put("from", from.name());
+            entry.put("to",   to.name());
+            entry.put("by",   by != null ? by : "");
+            entry.put("at",   OffsetDateTime.now().toString());
+            mutable.add(mapper.treeToValue(entry, Map.class));
+
+            return mapper.writeValueAsString(mutable);
+        } catch (JsonProcessingException e) {
+            throw new IllegalStateException("Failed to append audit JSON", e);
         }
-        return trimmed.substring(0, trimmed.length() - 1) + "," + entry + "]";
     }
 }
