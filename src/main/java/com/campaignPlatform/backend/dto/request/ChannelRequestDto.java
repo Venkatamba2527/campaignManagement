@@ -17,11 +17,7 @@ public record ChannelRequestDto(
         @NotNull(message = "Channel type is required")
         ChannelType type,
 
-     
+        String description,
 
         Boolean isActive
-) {
-    public ChannelRequestDto {
-        if (isActive == null) isActive = true;
-    }
-}
+) {}

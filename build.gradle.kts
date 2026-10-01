@@ -80,6 +80,15 @@ tasks.named<org.springframework.boot.gradle.tasks.bundling.BootJar>("bootJar") {
     archiveBaseName.set("campaign-platform")
 }
 
+// Add jOOQ generated sources to the main source set
+sourceSets {
+    main {
+        java {
+            srcDir("build/generated-sources/jooq")
+        }
+    }
+}
+
 tasks.withType<Test> {
     useJUnitPlatform()
 }

@@ -40,7 +40,6 @@ public class CampaignService {
     }
 
     public List<CampaignResponseDto> getCampaignsByChannel(Long channelId) {
-        // Validate channel exists
         channelRepository.findById(channelId)
                 .orElseThrow(() -> new NoSuchElementException("Channel not found with id: " + channelId));
         return campaignRepository.findByChannelId(channelId);
@@ -51,10 +50,8 @@ public class CampaignService {
     // -------------------------------------------------------
 
     public CampaignResponseDto createCampaign(CampaignRequestDto dto) {
-        // Validate all channel IDs exist
         validateChannelIds(dto.channelIds());
 
-        // Validate dates
         if (dto.startAt() != null && dto.endAt() != null
                 && dto.endAt().isBefore(dto.startAt())) {
             throw new IllegalArgumentException("End date must be after start date");
@@ -68,14 +65,11 @@ public class CampaignService {
     // -------------------------------------------------------
 
     public CampaignResponseDto updateCampaign(Long id, CampaignRequestDto dto) {
-        // Ensure campaign exists
         campaignRepository.findById(id)
                 .orElseThrow(() -> new NoSuchElementException("Campaign not found with id: " + id));
 
-        // Validate all channel IDs exist
         validateChannelIds(dto.channelIds());
 
-        // Validate dates
         if (dto.startAt() != null && dto.endAt() != null
                 && dto.endAt().isBefore(dto.startAt())) {
             throw new IllegalArgumentException("End date must be after start date");
@@ -89,7 +83,6 @@ public class CampaignService {
         CampaignResponseDto existing = campaignRepository.findById(id)
                 .orElseThrow(() -> new NoSuchElementException("Campaign not found with id: " + id));
 
-        // Validate status transition
         validateStatusTransition(existing.status(), newStatus);
 
         return campaignRepository.updateStatus(id, newStatus)
@@ -101,7 +94,6 @@ public class CampaignService {
     // -------------------------------------------------------
 
     public void deleteCampaign(Long id) {
-        // Only allow deletion of DRAFT or CANCELLED campaigns
         CampaignResponseDto existing = campaignRepository.findById(id)
                 .orElseThrow(() -> new NoSuchElementException("Campaign not found with id: " + id));
 

@@ -39,7 +39,6 @@ public class ChannelService {
     // -------------------------------------------------------
 
     public ChannelResponseDto createChannel(ChannelRequestDto dto) {
-        // Check for duplicate name
         boolean nameExists = channelRepository.findAll()
                 .stream()
                 .anyMatch(c -> c.name().equalsIgnoreCase(dto.name()));

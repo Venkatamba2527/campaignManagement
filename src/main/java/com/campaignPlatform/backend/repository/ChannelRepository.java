@@ -129,9 +129,8 @@ public class ChannelRepository {
     // -------------------------------------------------------
 
     public boolean delete(Long id) {
-        int deleted = dsl.deleteFrom(CHANNEL)
+        return dsl.deleteFrom(CHANNEL)
                 .where(CHANNEL.ID.eq(id))
-                .execute();
-        return deleted > 0;
+                .execute() > 0;
     }
 }

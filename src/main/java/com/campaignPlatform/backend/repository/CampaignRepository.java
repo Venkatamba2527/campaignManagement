@@ -7,7 +7,6 @@ import org.jooq.DSLContext;
 import org.springframework.stereotype.Repository;
 
 import java.time.OffsetDateTime;
-import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
@@ -73,7 +72,6 @@ public class CampaignRepository {
     // -------------------------------------------------------
 
     public CampaignResponseDto create(CampaignRequestDto dto) {
-        // Insert campaign
         var record = dsl.insertInto(CAMPAIGN)
                 .set(CAMPAIGN.NAME,        dto.name())
                 .set(CAMPAIGN.DESCRIPTION, dto.description())
@@ -88,7 +86,6 @@ public class CampaignRepository {
 
         Long campaignId = record.getId();
 
-        // Insert channel associations
         if (dto.channelIds() != null && !dto.channelIds().isEmpty()) {
             for (Long channelId : dto.channelIds()) {
                 dsl.insertInto(CAMPAIGN_CHANNEL)
@@ -122,7 +119,6 @@ public class CampaignRepository {
 
         if (updated == 0) return Optional.empty();
 
-        // Replace channel associations
         if (dto.channelIds() != null) {
             dsl.deleteFrom(CAMPAIGN_CHANNEL)
                     .where(CAMPAIGN_CHANNEL.CAMPAIGN_ID.eq(id))
@@ -154,7 +150,6 @@ public class CampaignRepository {
     // -------------------------------------------------------
 
     public boolean delete(Long id) {
-        // campaign_channel rows deleted via ON DELETE CASCADE
         return dsl.deleteFrom(CAMPAIGN)
                 .where(CAMPAIGN.ID.eq(id))
                 .execute() > 0;
