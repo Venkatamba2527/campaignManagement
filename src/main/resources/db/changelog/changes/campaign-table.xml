@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                                       http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.8.xsd">
+
+    <changeSet id="db.changelog-20260930000002-create-campaign" author="campaign-platform">
+
+        <comment>
+            Create campaign table with channel_ids (BIGINT array) for channel associations
+            and audit (JSONB) for full change history tracking
+        </comment>
+
+        <sql dbms="postgresql" splitStatements="true" stripComments="true">
+            <![CDATA[
+            CREATE TABLE public.campaign (
+                id          BIGSERIAL       NOT NULL,
+                name        VARCHAR(200)    NOT NULL,
+                description TEXT,
+                status      VARCHAR(30)     NOT NULL DEFAULT 'DRAFT',
+                channel_ids BIGINT[]        NOT NULL DEFAULT '{}',
+                budget      NUMERIC(15,2),
+                currency    VARCHAR(3)      NOT NULL DEFAULT 'USD',
+                start_at    TIMESTAMPTZ,
+                end_at      TIMESTAMPTZ,
+                created_by  VARCHAR(100),
+                created_at  TIMESTAMPTZ     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                updated_at  TIMESTAMPTZ     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                audit       JSONB           NOT NULL DEFAULT '[]',
+
+                CONSTRAINT pk_campaign PRIMARY KEY (id),
+
+                CONSTRAINT chk_campaign_status
+                    CHECK (status IN ('DRAFT','SCHEDULED','RUNNING','PAUSED','COMPLETED','CANCELLED'))
+            );
+
+            CREATE INDEX idx_campaign_status
+                ON public.campaign(status);
+
+            CREATE INDEX idx_campaign_dates
+                ON public.campaign(start_at, end_at);
+
+            CREATE INDEX idx_campaign_channel_ids
+                ON public.campaign USING GIN (channel_ids);
+
+            CREATE INDEX idx_campaign_audit
+                ON public.campaign USING GIN (audit);
+            ]]>
+        </sql>
+
+        <rollback>
+            <sql dbms="postgresql" splitStatements="true" stripComments="true">
+                <![CDATA[
+                DROP TABLE IF EXISTS public.campaign;
+                ]]>
+            </sql>
+        </rollback>
+
+    </changeSet>
+
+</databaseChangeLog>
