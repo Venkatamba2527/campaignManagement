@@ -8,7 +8,8 @@
     <changeSet id="db.changelog-20260930000004-create-campaign-metric" author="campaign-platform">
 
         <comment>
-            Create campaign_metric table to track daily performance metrics per campaign
+            Create campaign_metric table to track daily performance metrics per campaign,
+            enabling trend analysis and reporting over time
         </comment>
 
         <sql dbms="postgresql" splitStatements="true" stripComments="true">
@@ -39,6 +40,9 @@
 
             CREATE INDEX idx_campaign_metric_date
                 ON public.campaign_metric(metric_date);
+
+            CREATE INDEX idx_campaign_metric_campaign
+                ON public.campaign_metric(campaign_id);
             ]]>
         </sql>
 

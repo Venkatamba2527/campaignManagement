@@ -8,7 +8,8 @@
     <changeSet id="db.changelog-20260930000003-create-campaign-channel" author="campaign-platform">
 
         <comment>
-            Create campaign_channel join table linking campaigns to their channels with budget allocation
+            Create campaign_channel join table for many-to-many relationship
+            between campaigns and channels, with per-channel budget allocation
         </comment>
 
         <sql dbms="postgresql" splitStatements="true" stripComments="true">
@@ -37,6 +38,12 @@
                     REFERENCES public.channel(id)
                     ON DELETE RESTRICT
             );
+
+            CREATE INDEX idx_campaign_channel_campaign
+                ON public.campaign_channel(campaign_id);
+
+            CREATE INDEX idx_campaign_channel_channel
+                ON public.campaign_channel(channel_id);
             ]]>
         </sql>
 

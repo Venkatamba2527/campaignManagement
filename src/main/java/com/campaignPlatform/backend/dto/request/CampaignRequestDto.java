@@ -6,6 +6,7 @@ import jakarta.validation.constraints.Size;
 
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
+import java.util.List;
 
 /**
  * DTO for creating or updating a Campaign.
@@ -16,7 +17,10 @@ public record CampaignRequestDto(
         @Size(max = 200, message = "Campaign name must not exceed 200 characters")
         String name,
 
-        
+        String description,
+
+        // IDs of channels this campaign runs on (many-to-many)
+        List<Long> channelIds,
 
         @DecimalMin(value = "0.0", inclusive = false, message = "Budget must be greater than 0")
         BigDecimal budget,

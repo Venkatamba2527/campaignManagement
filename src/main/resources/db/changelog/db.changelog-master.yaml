@@ -8,12 +8,4 @@ databaseChangeLog:
   - include:
       file: db/changelog/changes/campaign-metric-table.xml
   - include:
-      file: db/changelog/changes/campaign-status-history-table.xml
-  - include:
-      file: db/changelog/changes/seed-channels.xml
-  - include:
-      file: db/changelog/changes/add-campaign-status-check.xml
-  - include:
-      file: db/changelog/changes/add-channel-type-check.xml
-  - include:
-      file: db/changelog/changes/add-updated-at-triggers.xml
+      file: db/changelog/seed/seed-channels.xml

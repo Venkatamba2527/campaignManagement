@@ -7,10 +7,12 @@ import org.jooq.DSLContext;
 import org.springframework.stereotype.Repository;
 
 import java.time.OffsetDateTime;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
 import static com.campaignplatform.jooq.Tables.CAMPAIGN;
+import static com.campaignplatform.jooq.Tables.CAMPAIGN_CHANNEL;
 
 @Repository
 public class CampaignRepository {
@@ -28,57 +30,42 @@ public class CampaignRepository {
     public List<CampaignResponseDto> findAll() {
         return dsl.selectFrom(CAMPAIGN)
                 .fetch()
-                .map(r -> new CampaignResponseDto(
-                        r.getId(),
-                        r.getName(),
-                        r.getDescription(),
-                        CampaignStatus.valueOf(r.getStatus()),
-                        r.getBudget(),
-                        r.getCurrency(),
-                        r.getStartAt(),
-                        r.getEndAt(),
-                        r.getCreatedBy(),
-                        r.getCreatedAt(),
-                        r.getUpdatedAt()
-                ));
+                .map(r -> toDto(r.getId(), r.getName(), r.getDescription(),
+                        r.getStatus(), r.getBudget(), r.getCurrency(),
+                        r.getStartAt(), r.getEndAt(), r.getCreatedBy(),
+                        r.getCreatedAt(), r.getUpdatedAt()));
     }
 
     public Optional<CampaignResponseDto> findById(Long id) {
         return dsl.selectFrom(CAMPAIGN)
                 .where(CAMPAIGN.ID.eq(id))
                 .fetchOptional()
-                .map(r -> new CampaignResponseDto(
-                        r.getId(),
-                        r.getName(),
-                        r.getDescription(),
-                        CampaignStatus.valueOf(r.getStatus()),
-                        r.getBudget(),
-                        r.getCurrency(),
-                        r.getStartAt(),
-                        r.getEndAt(),
-                        r.getCreatedBy(),
-                        r.getCreatedAt(),
-                        r.getUpdatedAt()
-                ));
+                .map(r -> toDto(r.getId(), r.getName(), r.getDescription(),
+                        r.getStatus(), r.getBudget(), r.getCurrency(),
+                        r.getStartAt(), r.getEndAt(), r.getCreatedBy(),
+                        r.getCreatedAt(), r.getUpdatedAt()));
     }
 
     public List<CampaignResponseDto> findByStatus(CampaignStatus status) {
         return dsl.selectFrom(CAMPAIGN)
                 .where(CAMPAIGN.STATUS.eq(status.name()))
                 .fetch()
-                .map(r -> new CampaignResponseDto(
-                        r.getId(),
-                        r.getName(),
-                        r.getDescription(),
-                        CampaignStatus.valueOf(r.getStatus()),
-                        r.getBudget(),
-                        r.getCurrency(),
-                        r.getStartAt(),
-                        r.getEndAt(),
-                        r.getCreatedBy(),
-                        r.getCreatedAt(),
-                        r.getUpdatedAt()
-                ));
+                .map(r -> toDto(r.getId(), r.getName(), r.getDescription(),
+                        r.getStatus(), r.getBudget(), r.getCurrency(),
+                        r.getStartAt(), r.getEndAt(), r.getCreatedBy(),
+                        r.getCreatedAt(), r.getUpdatedAt()));
+    }
+
+    public List<CampaignResponseDto> findByChannelId(Long channelId) {
+        return dsl.select(CAMPAIGN.fields())
+                .from(CAMPAIGN)
+                .join(CAMPAIGN_CHANNEL).on(CAMPAIGN_CHANNEL.CAMPAIGN_ID.eq(CAMPAIGN.ID))
+                .where(CAMPAIGN_CHANNEL.CHANNEL_ID.eq(channelId))
+                .fetchInto(CAMPAIGN)
+                .map(r -> toDto(r.getId(), r.getName(), r.getDescription(),
+                        r.getStatus(), r.getBudget(), r.getCurrency(),
+                        r.getStartAt(), r.getEndAt(), r.getCreatedBy(),
+                        r.getCreatedAt(), r.getUpdatedAt()));
     }
 
     // -------------------------------------------------------
@@ -86,7 +73,8 @@ public class CampaignRepository {
     // -------------------------------------------------------
 
     public CampaignResponseDto create(CampaignRequestDto dto) {
-        return dsl.insertInto(CAMPAIGN)
+        // Insert campaign
+        var record = dsl.insertInto(CAMPAIGN)
                 .set(CAMPAIGN.NAME,        dto.name())
                 .set(CAMPAIGN.DESCRIPTION, dto.description())
                 .set(CAMPAIGN.STATUS,      CampaignStatus.DRAFT.name())
@@ -96,19 +84,24 @@ public class CampaignRepository {
                 .set(CAMPAIGN.END_AT,      dto.endAt())
                 .set(CAMPAIGN.CREATED_BY,  dto.createdBy())
                 .returning()
-                .fetchOne(r -> new CampaignResponseDto(
-                        r.getId(),
-                        r.getName(),
-                        r.getDescription(),
-                        CampaignStatus.valueOf(r.getStatus()),
-                        r.getBudget(),
-                        r.getCurrency(),
-                        r.getStartAt(),
-                        r.getEndAt(),
-                        r.getCreatedBy(),
-                        r.getCreatedAt(),
-                        r.getUpdatedAt()
-                ));
+                .fetchOne();
+
+        Long campaignId = record.getId();
+
+        // Insert channel associations
+        if (dto.channelIds() != null && !dto.channelIds().isEmpty()) {
+            for (Long channelId : dto.channelIds()) {
+                dsl.insertInto(CAMPAIGN_CHANNEL)
+                        .set(CAMPAIGN_CHANNEL.CAMPAIGN_ID, campaignId)
+                        .set(CAMPAIGN_CHANNEL.CHANNEL_ID,  channelId)
+                        .execute();
+            }
+        }
+
+        return toDto(record.getId(), record.getName(), record.getDescription(),
+                record.getStatus(), record.getBudget(), record.getCurrency(),
+                record.getStartAt(), record.getEndAt(), record.getCreatedBy(),
+                record.getCreatedAt(), record.getUpdatedAt());
     }
 
     // -------------------------------------------------------
@@ -128,6 +121,20 @@ public class CampaignRepository {
                 .execute();
 
         if (updated == 0) return Optional.empty();
+
+        // Replace channel associations
+        if (dto.channelIds() != null) {
+            dsl.deleteFrom(CAMPAIGN_CHANNEL)
+                    .where(CAMPAIGN_CHANNEL.CAMPAIGN_ID.eq(id))
+                    .execute();
+            for (Long channelId : dto.channelIds()) {
+                dsl.insertInto(CAMPAIGN_CHANNEL)
+                        .set(CAMPAIGN_CHANNEL.CAMPAIGN_ID, id)
+                        .set(CAMPAIGN_CHANNEL.CHANNEL_ID,  channelId)
+                        .execute();
+            }
+        }
+
         return findById(id);
     }
 
@@ -147,9 +154,35 @@ public class CampaignRepository {
     // -------------------------------------------------------
 
     public boolean delete(Long id) {
-        int deleted = dsl.deleteFrom(CAMPAIGN)
+        // campaign_channel rows deleted via ON DELETE CASCADE
+        return dsl.deleteFrom(CAMPAIGN)
                 .where(CAMPAIGN.ID.eq(id))
-                .execute();
-        return deleted > 0;
+                .execute() > 0;
+    }
+
+    // -------------------------------------------------------
+    // HELPERS
+    // -------------------------------------------------------
+
+    private List<Long> fetchChannelIds(Long campaignId) {
+        return dsl.select(CAMPAIGN_CHANNEL.CHANNEL_ID)
+                .from(CAMPAIGN_CHANNEL)
+                .where(CAMPAIGN_CHANNEL.CAMPAIGN_ID.eq(campaignId))
+                .fetch(CAMPAIGN_CHANNEL.CHANNEL_ID);
+    }
+
+    private CampaignResponseDto toDto(Long id, String name, String description,
+                                       String status, java.math.BigDecimal budget,
+                                       String currency, OffsetDateTime startAt,
+                                       OffsetDateTime endAt, String createdBy,
+                                       OffsetDateTime createdAt, OffsetDateTime updatedAt) {
+        return new CampaignResponseDto(
+                id, name, description,
+                CampaignStatus.valueOf(status),
+                fetchChannelIds(id),
+                budget, currency,
+                startAt, endAt,
+                createdBy, createdAt, updatedAt
+        );
     }
 }

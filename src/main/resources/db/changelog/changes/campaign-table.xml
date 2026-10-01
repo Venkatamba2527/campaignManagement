@@ -26,7 +26,10 @@
                 created_at  TIMESTAMPTZ   NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 updated_at  TIMESTAMPTZ   NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
-                CONSTRAINT pk_campaign PRIMARY KEY (id)
+                CONSTRAINT pk_campaign PRIMARY KEY (id),
+
+                CONSTRAINT chk_campaign_status
+                    CHECK (status IN ('DRAFT','SCHEDULED','RUNNING','PAUSED','COMPLETED','CANCELLED'))
             );
 
             CREATE INDEX idx_campaign_status
