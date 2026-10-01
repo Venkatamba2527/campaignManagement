@@ -19,7 +19,7 @@ public record CampaignRequestDto(
 
         String description,
 
-        // IDs of channels this campaign runs on (many-to-many)
+        // IDs of channels this campaign runs on (stored as BIGINT[] in DB)
         List<Long> channelIds,
 
         @DecimalMin(value = "0.0", inclusive = false, message = "Budget must be greater than 0")

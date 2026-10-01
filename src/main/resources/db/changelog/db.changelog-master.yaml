@@ -2,7 +2,4 @@ databaseChangeLog:
   - include: { file: db/changelog/changes/channel-table.xml }
   - include: { file: db/changelog/changes/campaign-table.xml }
   - include: { file: db/changelog/changes/campaign-metric-table.xml }
-  - include: { file: db/changelog/changes/updated-at-triggers.xml }
-  - include: { file: db/changelog/changes/status-history-trigger.xml }
-  - include: { file: db/changelog/changes/views.xml }
   - include: { file: db/changelog/seed/seed-channels.xml }

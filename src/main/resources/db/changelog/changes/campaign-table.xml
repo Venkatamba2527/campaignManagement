@@ -8,23 +8,26 @@
     <changeSet id="db.changelog-20260930000002-create-campaign" author="campaign-platform">
 
         <comment>
-            Create campaign table to store campaign definitions with budget, status and scheduling info
+            Create campaign table with channel_ids (BIGINT array) for channel associations
+            and audit (JSONB) for full change history tracking
         </comment>
 
         <sql dbms="postgresql" splitStatements="true" stripComments="true">
             <![CDATA[
             CREATE TABLE public.campaign (
-                id          BIGSERIAL     NOT NULL,
-                name        VARCHAR(200)  NOT NULL,
+                id          BIGSERIAL       NOT NULL,
+                name        VARCHAR(200)    NOT NULL,
                 description TEXT,
-                status      VARCHAR(30)   NOT NULL DEFAULT 'DRAFT',
+                status      VARCHAR(30)     NOT NULL DEFAULT 'DRAFT',
+                channel_ids BIGINT[]        NOT NULL DEFAULT '{}',
                 budget      NUMERIC(15,2),
-                currency    VARCHAR(3)    NOT NULL DEFAULT 'USD',
+                currency    VARCHAR(3)      NOT NULL DEFAULT 'USD',
                 start_at    TIMESTAMPTZ,
                 end_at      TIMESTAMPTZ,
                 created_by  VARCHAR(100),
-                created_at  TIMESTAMPTZ   NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                updated_at  TIMESTAMPTZ   NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                created_at  TIMESTAMPTZ     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                updated_at  TIMESTAMPTZ     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                audit       JSONB           NOT NULL DEFAULT '[]',
 
                 CONSTRAINT pk_campaign PRIMARY KEY (id),
 
@@ -37,6 +40,12 @@
 
             CREATE INDEX idx_campaign_dates
                 ON public.campaign(start_at, end_at);
+
+            CREATE INDEX idx_campaign_channel_ids
+                ON public.campaign USING GIN (channel_ids);
+
+            CREATE INDEX idx_campaign_audit
+                ON public.campaign USING GIN (audit);
             ]]>
         </sql>
 

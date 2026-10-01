@@ -8,6 +8,8 @@ import java.util.List;
 
 /**
  * DTO returned by the API representing a Campaign.
+ * channelIds maps to the BIGINT[] column on the campaign table.
+ * audit maps to the JSONB audit log column.
  */
 public record CampaignResponseDto(
 
@@ -15,15 +17,13 @@ public record CampaignResponseDto(
         String name,
         String description,
         CampaignStatus status,
-
-        // Channels this campaign is running on
         List<Long> channelIds,
-
         BigDecimal budget,
         String currency,
         OffsetDateTime startAt,
         OffsetDateTime endAt,
         String createdBy,
         OffsetDateTime createdAt,
-        OffsetDateTime updatedAt
+        OffsetDateTime updatedAt,
+        String audit
 ) {}

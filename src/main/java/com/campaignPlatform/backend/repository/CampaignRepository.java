@@ -4,14 +4,15 @@ import com.campaignPlatform.backend.domain.CampaignStatus;
 import com.campaignPlatform.backend.dto.request.CampaignRequestDto;
 import com.campaignPlatform.backend.dto.response.CampaignResponseDto;
 import org.jooq.DSLContext;
+import org.jooq.JSONB;
 import org.springframework.stereotype.Repository;
 
 import java.time.OffsetDateTime;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 
 import static com.campaignplatform.jooq.Tables.CAMPAIGN;
-import static com.campaignplatform.jooq.Tables.CAMPAIGN_CHANNEL;
 
 @Repository
 public class CampaignRepository {
@@ -29,42 +30,29 @@ public class CampaignRepository {
     public List<CampaignResponseDto> findAll() {
         return dsl.selectFrom(CAMPAIGN)
                 .fetch()
-                .map(r -> toDto(r.getId(), r.getName(), r.getDescription(),
-                        r.getStatus(), r.getBudget(), r.getCurrency(),
-                        r.getStartAt(), r.getEndAt(), r.getCreatedBy(),
-                        r.getCreatedAt(), r.getUpdatedAt()));
+                .map(this::toDto);
     }
 
     public Optional<CampaignResponseDto> findById(Long id) {
         return dsl.selectFrom(CAMPAIGN)
                 .where(CAMPAIGN.ID.eq(id))
                 .fetchOptional()
-                .map(r -> toDto(r.getId(), r.getName(), r.getDescription(),
-                        r.getStatus(), r.getBudget(), r.getCurrency(),
-                        r.getStartAt(), r.getEndAt(), r.getCreatedBy(),
-                        r.getCreatedAt(), r.getUpdatedAt()));
+                .map(this::toDto);
     }
 
     public List<CampaignResponseDto> findByStatus(CampaignStatus status) {
         return dsl.selectFrom(CAMPAIGN)
                 .where(CAMPAIGN.STATUS.eq(status.name()))
                 .fetch()
-                .map(r -> toDto(r.getId(), r.getName(), r.getDescription(),
-                        r.getStatus(), r.getBudget(), r.getCurrency(),
-                        r.getStartAt(), r.getEndAt(), r.getCreatedBy(),
-                        r.getCreatedAt(), r.getUpdatedAt()));
+                .map(this::toDto);
     }
 
     public List<CampaignResponseDto> findByChannelId(Long channelId) {
-        return dsl.select(CAMPAIGN.fields())
-                .from(CAMPAIGN)
-                .join(CAMPAIGN_CHANNEL).on(CAMPAIGN_CHANNEL.CAMPAIGN_ID.eq(CAMPAIGN.ID))
-                .where(CAMPAIGN_CHANNEL.CHANNEL_ID.eq(channelId))
-                .fetchInto(CAMPAIGN)
-                .map(r -> toDto(r.getId(), r.getName(), r.getDescription(),
-                        r.getStatus(), r.getBudget(), r.getCurrency(),
-                        r.getStartAt(), r.getEndAt(), r.getCreatedBy(),
-                        r.getCreatedAt(), r.getUpdatedAt()));
+        // Use PostgreSQL && (overlap) operator to find campaigns containing channelId
+        return dsl.selectFrom(CAMPAIGN)
+                .where(CAMPAIGN.CHANNEL_IDS.contains(new Long[]{channelId}))
+                .fetch()
+                .map(this::toDto);
     }
 
     // -------------------------------------------------------
@@ -72,33 +60,26 @@ public class CampaignRepository {
     // -------------------------------------------------------
 
     public CampaignResponseDto create(CampaignRequestDto dto) {
+        Long[] channelIds = toArray(dto.channelIds());
+
+        // Initial audit entry
+        String audit = buildAuditEntry(null, CampaignStatus.DRAFT, dto.createdBy());
+
         var record = dsl.insertInto(CAMPAIGN)
                 .set(CAMPAIGN.NAME,        dto.name())
                 .set(CAMPAIGN.DESCRIPTION, dto.description())
                 .set(CAMPAIGN.STATUS,      CampaignStatus.DRAFT.name())
+                .set(CAMPAIGN.CHANNEL_IDS, channelIds)
                 .set(CAMPAIGN.BUDGET,      dto.budget())
                 .set(CAMPAIGN.CURRENCY,    dto.currency())
                 .set(CAMPAIGN.START_AT,    dto.startAt())
                 .set(CAMPAIGN.END_AT,      dto.endAt())
                 .set(CAMPAIGN.CREATED_BY,  dto.createdBy())
+                .set(CAMPAIGN.AUDIT,       JSONB.valueOf(audit))
                 .returning()
                 .fetchOne();
 
-        Long campaignId = record.getId();
-
-        if (dto.channelIds() != null && !dto.channelIds().isEmpty()) {
-            for (Long channelId : dto.channelIds()) {
-                dsl.insertInto(CAMPAIGN_CHANNEL)
-                        .set(CAMPAIGN_CHANNEL.CAMPAIGN_ID, campaignId)
-                        .set(CAMPAIGN_CHANNEL.CHANNEL_ID,  channelId)
-                        .execute();
-            }
-        }
-
-        return toDto(record.getId(), record.getName(), record.getDescription(),
-                record.getStatus(), record.getBudget(), record.getCurrency(),
-                record.getStartAt(), record.getEndAt(), record.getCreatedBy(),
-                record.getCreatedAt(), record.getUpdatedAt());
+        return toDto(record);
     }
 
     // -------------------------------------------------------
@@ -106,9 +87,12 @@ public class CampaignRepository {
     // -------------------------------------------------------
 
     public Optional<CampaignResponseDto> update(Long id, CampaignRequestDto dto) {
+        Long[] channelIds = toArray(dto.channelIds());
+
         int updated = dsl.update(CAMPAIGN)
                 .set(CAMPAIGN.NAME,        dto.name())
                 .set(CAMPAIGN.DESCRIPTION, dto.description())
+                .set(CAMPAIGN.CHANNEL_IDS, channelIds)
                 .set(CAMPAIGN.BUDGET,      dto.budget())
                 .set(CAMPAIGN.CURRENCY,    dto.currency())
                 .set(CAMPAIGN.START_AT,    dto.startAt())
@@ -118,26 +102,24 @@ public class CampaignRepository {
                 .execute();
 
         if (updated == 0) return Optional.empty();
-
-        if (dto.channelIds() != null) {
-            dsl.deleteFrom(CAMPAIGN_CHANNEL)
-                    .where(CAMPAIGN_CHANNEL.CAMPAIGN_ID.eq(id))
-                    .execute();
-            for (Long channelId : dto.channelIds()) {
-                dsl.insertInto(CAMPAIGN_CHANNEL)
-                        .set(CAMPAIGN_CHANNEL.CAMPAIGN_ID, id)
-                        .set(CAMPAIGN_CHANNEL.CHANNEL_ID,  channelId)
-                        .execute();
-            }
-        }
-
         return findById(id);
     }
 
-    public Optional<CampaignResponseDto> updateStatus(Long id, CampaignStatus status) {
+    public Optional<CampaignResponseDto> updateStatus(Long id, CampaignStatus newStatus, String changedBy) {
+        // Fetch current to build audit entry
+        var existing = dsl.selectFrom(CAMPAIGN)
+                .where(CAMPAIGN.ID.eq(id))
+                .fetchOne();
+        if (existing == null) return Optional.empty();
+
+        CampaignStatus oldStatus = CampaignStatus.valueOf(existing.getStatus());
+        String currentAudit = existing.getAudit() != null ? existing.getAudit().data() : "[]";
+        String newAudit = appendAuditEntry(currentAudit, oldStatus, newStatus, changedBy);
+
         int updated = dsl.update(CAMPAIGN)
-                .set(CAMPAIGN.STATUS,     status.name())
+                .set(CAMPAIGN.STATUS,     newStatus.name())
                 .set(CAMPAIGN.UPDATED_AT, OffsetDateTime.now())
+                .set(CAMPAIGN.AUDIT,      JSONB.valueOf(newAudit))
                 .where(CAMPAIGN.ID.eq(id))
                 .execute();
 
@@ -159,25 +141,50 @@ public class CampaignRepository {
     // HELPERS
     // -------------------------------------------------------
 
-    private List<Long> fetchChannelIds(Long campaignId) {
-        return dsl.select(CAMPAIGN_CHANNEL.CHANNEL_ID)
-                .from(CAMPAIGN_CHANNEL)
-                .where(CAMPAIGN_CHANNEL.CAMPAIGN_ID.eq(campaignId))
-                .fetch(CAMPAIGN_CHANNEL.CHANNEL_ID);
+    private CampaignResponseDto toDto(
+            com.campaignplatform.jooq.tables.records.CampaignRecord r) {
+        Long[] arr = r.getChannelIds();
+        List<Long> channelIds = (arr != null) ? Arrays.asList(arr) : List.of();
+        String audit = (r.getAudit() != null) ? r.getAudit().data() : "[]";
+
+        return new CampaignResponseDto(
+                r.getId(),
+                r.getName(),
+                r.getDescription(),
+                CampaignStatus.valueOf(r.getStatus()),
+                channelIds,
+                r.getBudget(),
+                r.getCurrency(),
+                r.getStartAt(),
+                r.getEndAt(),
+                r.getCreatedBy(),
+                r.getCreatedAt(),
+                r.getUpdatedAt(),
+                audit
+        );
     }
 
-    private CampaignResponseDto toDto(Long id, String name, String description,
-                                       String status, java.math.BigDecimal budget,
-                                       String currency, OffsetDateTime startAt,
-                                       OffsetDateTime endAt, String createdBy,
-                                       OffsetDateTime createdAt, OffsetDateTime updatedAt) {
-        return new CampaignResponseDto(
-                id, name, description,
-                CampaignStatus.valueOf(status),
-                fetchChannelIds(id),
-                budget, currency,
-                startAt, endAt,
-                createdBy, createdAt, updatedAt
-        );
+    private Long[] toArray(List<Long> ids) {
+        if (ids == null || ids.isEmpty()) return new Long[0];
+        return ids.toArray(new Long[0]);
+    }
+
+    private String buildAuditEntry(CampaignStatus from, CampaignStatus to, String by) {
+        String ts = OffsetDateTime.now().toString();
+        String fromStr = from != null ? "\"" + from.name() + "\"" : "null";
+        return "[{\"from\":" + fromStr + ",\"to\":\"" + to.name()
+                + "\",\"by\":\"" + (by != null ? by : "") + "\",\"at\":\"" + ts + "\"}]";
+    }
+
+    private String appendAuditEntry(String existingJson, CampaignStatus from, CampaignStatus to, String by) {
+        String ts = OffsetDateTime.now().toString();
+        String entry = "{\"from\":\"" + from.name() + "\",\"to\":\"" + to.name()
+                + "\",\"by\":\"" + (by != null ? by : "") + "\",\"at\":\"" + ts + "\"}";
+        // Append to existing JSON array
+        String trimmed = existingJson.trim();
+        if (trimmed.equals("[]")) {
+            return "[" + entry + "]";
+        }
+        return trimmed.substring(0, trimmed.length() - 1) + "," + entry + "]";
     }
 }

@@ -40,6 +40,7 @@ public class CampaignService {
     }
 
     public List<CampaignResponseDto> getCampaignsByChannel(Long channelId) {
+        // Validate channel exists
         channelRepository.findById(channelId)
                 .orElseThrow(() -> new NoSuchElementException("Channel not found with id: " + channelId));
         return campaignRepository.findByChannelId(channelId);
@@ -79,13 +80,13 @@ public class CampaignService {
                 .orElseThrow(() -> new NoSuchElementException("Campaign not found with id: " + id));
     }
 
-    public CampaignResponseDto updateCampaignStatus(Long id, CampaignStatus newStatus) {
+    public CampaignResponseDto updateCampaignStatus(Long id, CampaignStatus newStatus, String changedBy) {
         CampaignResponseDto existing = campaignRepository.findById(id)
                 .orElseThrow(() -> new NoSuchElementException("Campaign not found with id: " + id));
 
         validateStatusTransition(existing.status(), newStatus);
 
-        return campaignRepository.updateStatus(id, newStatus)
+        return campaignRepository.updateStatus(id, newStatus, changedBy)
                 .orElseThrow(() -> new NoSuchElementException("Campaign not found with id: " + id));
     }
 
@@ -123,9 +124,9 @@ public class CampaignService {
         boolean valid = switch (current) {
             case DRAFT      -> next == CampaignStatus.SCHEDULED || next == CampaignStatus.CANCELLED;
             case SCHEDULED  -> next == CampaignStatus.RUNNING   || next == CampaignStatus.CANCELLED;
-            case RUNNING    -> next == CampaignStatus.PAUSED     || next == CampaignStatus.COMPLETED
-                                                                 || next == CampaignStatus.CANCELLED;
-            case PAUSED     -> next == CampaignStatus.RUNNING    || next == CampaignStatus.CANCELLED;
+            case RUNNING    -> next == CampaignStatus.PAUSED    || next == CampaignStatus.COMPLETED
+                                                                || next == CampaignStatus.CANCELLED;
+            case PAUSED     -> next == CampaignStatus.RUNNING   || next == CampaignStatus.CANCELLED;
             case COMPLETED, CANCELLED -> false;
         };
 
